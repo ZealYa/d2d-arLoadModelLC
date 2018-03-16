@@ -1,0 +1,44 @@
+DESCRIPTION
+"DelayChain_4"
+
+PREDICTOR
+t               T   min         time	0	100
+
+COMPARTMENTS
+
+STATES
+mRNA            C   "nM"      "conc."    
+mRNA1           C   "nM"      "conc."    
+mRNA2           C   "nM"      "conc."    
+mRNA3           C   "nM"      "conc."    
+mRNA4           C   "nM"      "conc."    
+Prod            C   "nM"      "conc."    
+
+INPUTS
+U               C   "nM"      "conc."  "exp(-k_stimDeg * t)"
+
+ODES
+"b - k_delay * mRNA + k_stim * U / (Km + U)"
+"k_delay * mRNA - k_delay * mRNA1"
+"k_delay * mRNA1 - k_delay * mRNA2"
+"k_delay * mRNA2 - k_delay * mRNA3"
+"k_delay * mRNA3 - k_delay * mRNA4"
+"k_prod * mRNA4 - k_deg * Prod"
+
+DERIVED
+        
+OBSERVABLES
+mRNA_au        C   "au"    "conc."   0   0   "mRNA"
+Prod_au        C   "au"    "conc."   0   0   "Prod"
+
+ERRORS
+mRNA_au       "sd_mRNA_au"
+Prod_au       "sd_Prod_au"
+
+CONDITIONS
+init_mRNA   "b/k_delay"
+init_mRNA1   "b/k_delay"
+init_mRNA2   "b/k_delay"
+init_mRNA3   "b/k_delay"
+init_mRNA4   "b/k_delay"
+init_Prod   "(b*k_prod)/(k_deg*k_delay)"
