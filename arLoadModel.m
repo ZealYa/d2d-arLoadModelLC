@@ -82,17 +82,14 @@ matVer = ver('MATLAB');
 % AAA - Check if delay is there
 %delayCh.modelAsString = fileread(['Models/' name '.def']); nicht benötigt
 %wegen fid.str
-delayChindicator = regexp(fid.str, '-\d->', 'Match');
-
-delayChbool = 0;
-delayChwhichone = 1;
-for i = 1:size(delayChindicator, 2)
-        delayCh(i).length = str2num(delayChindicator{i}(2));
-        delayCh(i).position = 1;
-%        delayCh(i).number = size(delayCh.indicator, 2);
-        delayCh(i).ctr = 1;
-        delayCh(i).enterDel = 0;
-        delayChbool = 1;
+delayCh.indicator = regexp(fid.str, '-\d->', 'Match');
+if(~isempty(delayCh.indicator))
+    delayCh.length = str2num(delayCh.indicator{1}(2));
+    delayCh.position = 1;
+    delayCh.number = size(delayCh.indicator, 2);
+    delayCh.ctr = 1;
+else
+    delayCh.number = 0;
 end
 
 % DESCRIPTION
@@ -208,13 +205,13 @@ while(~strcmp(C{1},'INPUTS'))
     [C, fid] = arTextScan(fid, '%s %q %q %q %s %n %q %n\n',1, 'CommentStyle', ar.config.comment_string);
     
     % AAA add delay states  
-    if(strcmp(C{1},'INPUTS') & delayChbool ~= 0)
+    if(strcmp(C{1},'INPUTS') & delayCh.number ~= 0)
         
-        for j = 1:size(delayCh, 2)
+        for j = 1:delayCh.number
             delinpid = find(ismember(ar.model(end).x, ['Delay' num2str(j) '_01']));
             
-            for i = 2:delayCh(j).length
-                C{1} = {sprintf('Delay%1d_%02d', j, i)};
+            for i = 2:delayCh.length
+                C{1} = {sprintf('Delay%1d_%02d', j,i)};
                 C{2} = ar.model(m).xUnits(delinpid,1);
                 C{3} = ar.model(m).xUnits(delinpid,2);
                 C{4} = ar.model(m).xUnits(delinpid,3);
@@ -629,27 +626,24 @@ if(strcmp(C{1},'REACTIONS') || strcmp(C{1},'REACTIONS-AMOUNTBASED'))
         %if delayCh.ctr == 1
             %[ line, remainder, fid ] = readLine( fid, ar.config.comment_string );
             if ~isempty(regexp(line, '-\d->'))
-                delayCh(delayChwhichone).enterDel = delayCh(delayChwhichone).enterDel + 1;
+                delayCh.enterDel = 1;
                 %delayCh.ctr = delayCh.ctr + 1;
             end
             
-            if delayCh(delayChwhichone).enterDel ~= 0 & delayCh(delayChwhichone).ctr < delayCh(delayChwhichone).length
+            if delayCh.enterDel == 1 & delayCh.ctr < delayCh.length
             %if delayCh.ctr > 1 && delayCh.ctr < delayCh.length
-            line = sprintf('Delay%1d_%02d -> Delay%1d_%02d CUSTOM "k_delay%1d*Delay%1d_%02d"',...
-                delayChwhichone, delayCh(delayChwhichone).ctr, delayChwhichone, delayCh(delayChwhichone).ctr+1, delayChwhichone, delayChwhichone, delayCh(delayChwhichone).ctr);
+            line = sprintf('Delay_%02d -> Delay_%02d CUSTOM "k_delay*Delay_%02d"',...
+                delayCh.ctr, delayCh.ctr+1, delayCh.ctr);
             remainder = line;
-            delayCh(delayChwhichone).ctr = delayCh(delayChwhichone).ctr + 1; %es wird gar keine neue line
+            delayCh.ctr = delayCh.ctr + 1; %es wird gar keine neue line
             %geladen also greift immer erste if clause
             end
             %[ line, remainder, fid ] = readLine( fid, ar.config.comment_string );
         %end %nach unten setzen?
         
         if isempty( remainder )
-            %if delayCh.ctr >= delayCh.length | delayCh.ctr == 1
+            if delayCh.ctr >= delayCh.length | delayCh.ctr == 1
             [ line, remainder, fid ] = readLine( fid, ar.config.comment_string );
-            %end
-            if delayCh(delayChwhichone).ctr == delayCh(delayChwhichone).length & delayChwhichone < size(delayChindicator, 2)
-                delayChwhichone = delayChwhichone + 1;
             end
         end
         
