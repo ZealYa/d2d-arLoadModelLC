@@ -79,20 +79,15 @@ end
 
 matVer = ver('MATLAB');
 
-% AAA - Check if delay is there
-%delayCh.modelAsString = fileread(['Models/' name '.def']); nicht benötigt
-%wegen fid.str
-delayChindicator = regexp(fid.str, '-\d->', 'Match');
-
-delayChbool = 0;
-delayChwhichone = 1;
-for i = 1:size(delayChindicator, 2)
-        delayCh(i).length = str2num(delayChindicator{i}(2));
-        delayCh(i).position = 1;
-%        delayCh(i).number = size(delayCh.indicator, 2);
-        delayCh(i).ctr = 1;
-        delayCh(i).enterDel = 0;
-        delayChbool = 1;
+chainIndicator = regexp(fid.str, '-\d->', 'Match');
+chainID = 1;
+chainIDst = 1;
+addStates = 0;
+qexit = 0;
+for i = 1:size(chainIndicator, 2)
+        delayCh(i).length = str2num(chainIndicator{i}(2));
+        delayCh(i).ctr = 0;
+        delayCh(i).ctrst = 2;
 end
 
 % DESCRIPTION
@@ -205,58 +200,36 @@ while(~strcmp(C{1},'INPUTS'))
     end
     ar.model(m).px0(end+1) = {['init_' cell2mat(C{1})]};
     
-    [C, fid] = arTextScan(fid, '%s %q %q %q %s %n %q %n\n',1, 'CommentStyle', ar.config.comment_string);
-    
-    % AAA add delay states  
-    if(strcmp(C{1},'INPUTS') & delayChbool ~= 0)
-        
-        for j = 1:size(delayCh, 2)
-            delinpid = find(ismember(ar.model(end).x, ['Delay' num2str(j) '_01']));
-            
-            for i = 2:delayCh(j).length
-                C{1} = {sprintf('Delay%1d_%02d', j, i)};
-                C{2} = ar.model(m).xUnits(delinpid,1);
-                C{3} = ar.model(m).xUnits(delinpid,2);
-                C{4} = ar.model(m).xUnits(delinpid,3);
-                %C{5} = compartments ergänzen
-                C{6} = ar.model(m).qPlotX(delinpid);
-                C{7} = {[ar.model(m).xNames{delinpid} '_' num2str(i)]};
-                C{8} = ar.model(m).qPositiveX(delinpid);
-                
-                ar.model(m).x(end+1) = C{1};
-                ar.model(m).xUnits(end+1,1) = C{2};
-                ar.model(m).xUnits(end,2) = C{3};
-                ar.model(m).xUnits(end,3) = C{4};
-                
-                if(~isempty(ar.model(m).c))
-                    qcomp = ismember(ar.model(m).c, C{5}); %R2013a compatible
-                    if(sum(qcomp)~=1)
-                        arParsingError( fid, 'unknown compartment %s', cell2mat(C{5}));
-                    end
-                    ar.model(m).cLink(end+1) = find(qcomp);
-                end
-                if(isempty(C{6}) || isnan(C{6}))
-                    ar.model(m).qPlotX(end+1) = 1;
-                else
-                    ar.model(m).qPlotX(end+1) = C{6};
-                end
-                if(~isempty(cell2mat(C{7})))
-                    ar.model(m).xNames(end+1) = C{7};
-                else
-                    ar.model(m).xNames{end+1} = ar.model(m).x{end};
-                end
-                if(isempty(C{8}) || isnan(C{8}))
-                    ar.model(m).qPositiveX(end+1) = 0;
-                else
-                    ar.model(m).qPositiveX(end+1) = C{8};
-                end
-                ar.model(m).px0(end+1) = {['init_' cell2mat(C{1})]};
-            end
-        end
-       
-        C{1} = 'INPUTS'; %return to normal 
+    if addStates == 0
+        [C, fid] = arTextScan(fid, '%s %q %q %q %s %n %q %n\n',1, 'CommentStyle', ar.config.comment_string);
     end
-    
+    if strcmp(C{1},'INPUTS') && ~isempty(chainIndicator)
+        addStates = 1;
+    end
+    if qexit == 0 && addStates == 1
+        C = {sprintf('Delay%1d_%02d', chainIDst, delayCh(chainIDst).ctrst), {'C'}, {"nM"},  {"conc."}, {}, {}, {}, {}};
+        delinpid = find(ismember(ar.model(end).x, sprintf('Delay%1d_%02d', chainIDst, 1)));
+        
+        C{1} = {sprintf('Delay%1d_%02d', chainIDst, delayCh(chainIDst).ctrst)};
+        C{2} = ar.model(m).xUnits(delinpid,1);
+        C{3} = ar.model(m).xUnits(delinpid,2);
+        C{4} = ar.model(m).xUnits(delinpid,3);
+        %C{5} = compartments ergänzen
+        C{6} = ar.model(m).qPlotX(delinpid);
+        C{7} = {[ar.model(m).xNames{delinpid} '_' num2str(i)]};
+        C{8} = ar.model(m).qPositiveX(delinpid);
+        
+        delayCh(chainIDst).ctrst = delayCh(chainIDst).ctrst + 1;
+        if delayCh(chainIDst).ctrst == delayCh(chainIDst).length + 1;
+            chainIDst = chainIDst + 1;
+        end
+    end
+    if qexit == 1
+        C{1} = 'INPUTS';
+    end
+    if chainIDst >= size(chainIndicator, 2) + 1
+        qexit = 1;
+    end
 end
 
 % add delay states
@@ -375,12 +348,7 @@ if(strcmp(C{1},'REACTIONS') || strcmp(C{1},'REACTIONS-AMOUNTBASED'))
         else
             reversible = false;
         end
-        
-        % AAA check if there is a delay in the current line
                 
-% DELAY-ABFRAGE EINFÜHREN -> wenn positiv nach zuendelesen der aktuellen
-% Zeile str abändern
-        
         ar.model(m).reversible(end+1) = reversible;
         
         target = {};
@@ -626,34 +594,22 @@ if(strcmp(C{1},'REACTIONS') || strcmp(C{1},'REACTIONS-AMOUNTBASED'))
         %str = textscan(fid, '%s',1, 'CommentStyle', ar.config.comment_string);
         % No string left? Grab a new one
         
-        %if delayCh.ctr == 1
-            %[ line, remainder, fid ] = readLine( fid, ar.config.comment_string );
-            if ~isempty(regexp(line, '-\d->'))
-                delayCh(delayChwhichone).enterDel = delayCh(delayChwhichone).enterDel + 1;
-                %delayCh.ctr = delayCh.ctr + 1;
-            end
-            
-            if delayCh(delayChwhichone).enterDel ~= 0 & delayCh(delayChwhichone).ctr < delayCh(delayChwhichone).length
-            %if delayCh.ctr > 1 && delayCh.ctr < delayCh.length
+        if ~isempty(regexp(line, '-\d->', 'ONCE'))
+            delayCh(chainID).ctr = delayCh(chainID).ctr + 1;
+        end
+        if delayCh(chainID).ctr ~= 0 && delayCh(chainID).ctr < delayCh(chainID).length
             line = sprintf('Delay%1d_%02d -> Delay%1d_%02d CUSTOM "k_delay%1d*Delay%1d_%02d"',...
-                delayChwhichone, delayCh(delayChwhichone).ctr, delayChwhichone, delayCh(delayChwhichone).ctr+1, delayChwhichone, delayChwhichone, delayCh(delayChwhichone).ctr);
+                chainID, delayCh(chainID).ctr, chainID, delayCh(chainID).ctr+1, chainID, chainID, delayCh(chainID).ctr);
             remainder = line;
-            delayCh(delayChwhichone).ctr = delayCh(delayChwhichone).ctr + 1; %es wird gar keine neue line
+            delayCh(chainID).ctr = delayCh(chainID).ctr + 1; %es wird gar keine neue line
             %geladen also greift immer erste if clause
-            end
-            %[ line, remainder, fid ] = readLine( fid, ar.config.comment_string );
-        %end %nach unten setzen?
-        
+        end     
         if isempty( remainder )
-            %if delayCh.ctr >= delayCh.length | delayCh.ctr == 1
             [ line, remainder, fid ] = readLine( fid, ar.config.comment_string );
-            %end
-            if delayCh(delayChwhichone).ctr == delayCh(delayChwhichone).length & delayChwhichone < size(delayChindicator, 2)
-                delayChwhichone = delayChwhichone + 1;
+            if delayCh(chainID).ctr == delayCh(chainID).length & chainID < size(chainIndicator, 2)
+                chainID = chainID + 1;
             end
         end
-        
-        
         [str, remainder] = grabtoken( remainder, '%s', 1 );
     end
 elseif(strcmp(C{1},'ODES'))

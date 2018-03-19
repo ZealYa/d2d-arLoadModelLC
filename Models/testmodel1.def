@@ -17,6 +17,10 @@ INPUTS
 
 REACTIONS
 mRNA    -4->    Delay1_01  CUSTOM "k_delinp * mRNA"
+
+
+
+
 Delay1_04   ->      Prod        CUSTOM "k_prod * Delay1_04"
 Prod    -6->      Delay2_01            CUSTOM "k_deg * Prod"  
 Delay2_06 ->      CUSTOM "k_deg2 * Delay2_06"
