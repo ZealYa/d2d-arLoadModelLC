@@ -104,13 +104,14 @@ for i = 1:size(chainIndicator, 2)
     delayCh(i).stname = tmp_stname{end}{1};
     if ~isempty(strfind(fid.str, ['init_' delayCh(i).stname '_N']))
         delayCh(i).autoAddConditions = 1;
+        tmp_condition = regexp(fid.str, [sprintf('init_%s_N', delayCh(i).stname)...
+            '\s* "[^"]+"'], 'match');
+        tmp_condition = regexp(tmp_condition, '"', 'split');
+        delayCh(i).cond = tmp_condition{1}{2};
     else
         delayCh(i).autoAddConditions = 0;
     end
-    tmp_condition = regexp(fid.str, [sprintf('init_%s_N', delayCh(i).stname)...
-        '\s* "[^"]+"'], 'match');
-    tmp_condition = regexp(tmp_condition, '"', 'split');
-    delayCh(i).cond = tmp_condition{1}{2};
+    
 
     fid.str = strrep(fid.str, [delayCh(i).stname '_N'], ...
         sprintf('%s_%02d', delayCh(i).stname, delayCh(i).length));
@@ -1017,9 +1018,15 @@ else
         elseif delayCh(chainIDcnd).addConditions == 0 & str2double(matVer.Version)<8.4
             [C, fid] = arTextScan(fid, '%s %q %q %q %s %n %q %n\n',1, 'CommentStyle', ar.config.comment_string, 'BufSize', 2^16-1);
         end
-        if (isempty(C{1}) || (strcmp(C{1},'PARAMETERS') || strcmp(C{1}, 'RANDOM'))) && delayCh(chainIDcnd).autoAddConditions
-            delayCh(chainIDcnd).addConditions = 1;
-            tmp_C = C;
+        if (isempty(C{1}) || (strcmp(C{1},'PARAMETERS') || strcmp(C{1}, 'RANDOM')))
+            if delayCh(chainIDcnd).autoAddConditions
+                delayCh(chainIDcnd).addConditions = 1;
+                tmp_C = C;
+            else
+                chainIDcnd = chainIDcnd + 1;
+                delayCh(chainIDcnd).addConditions = delayCh(chainIDcnd).autoAddConditions;
+                %C{1} = {'Dummy'};
+            end
         end
         if qexit == 0 && delayCh(chainIDcnd).addConditions == 1
             %C{1} = {['init_' delayCh(chainIDcnd).stname '_' num2str(delayCh(chainIDcnd).ctrcnd)]};

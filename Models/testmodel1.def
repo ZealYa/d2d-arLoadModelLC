@@ -18,7 +18,7 @@ INPUTS
 REACTIONS
 mRNA    -4->    testDelay_01  CUSTOM "k_delinp * mRNA"
 testDelay_N  ->      Prod        CUSTOM "k_prod * testDelay_N"
-Prod    -6->      Delay_01            CUSTOM "k_deg * Prod"  
+Prod    -3->      Delay_01            CUSTOM "k_deg * Prod"  
 Delay_N ->      CUSTOM "k_deg2 * Delay_N"
 
 DERIVED
@@ -34,6 +34,10 @@ Prod_au       "sd_Prod_au"
 CONDITIONS
 init_mRNA   "b/k_delay"
 init_testDelay_N   "b/k_delay"
-init_Delay_N   "b/k_delay"
+
+init_Delay_01   "b/k_delay"
+init_Delay_02   "b/k_delay"
+init_Delay_03   "b/k_delay"
+
 
 init_Prod   "(b*k_prod)/(k_deg*k_delay)"
