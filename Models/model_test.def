@@ -1,0 +1,41 @@
+DESCRIPTION
+
+PREDICTOR
+t               T   min         time	0	100
+
+COMPARTMENTS
+
+STATES
+mRNA            	C   "nM"      "conc."    
+Prod            	C   "nM"      "conc."  
+testDelay_01        C   "nM"      "conc."  
+Delay_01          	C   "nM"      "conc."  
+
+
+INPUTS
+
+REACTIONS
+ 		-> 		A 			CUSTOM "k_stim"
+stA    	-4->    stB_01  	CUSTOM "k_del * stA"
+stB_N	-> 					CUSTOM "k_del * stB_N"
+
+		-> 		stC 		CUSTOM "k_prod * stB_N"		
+stC 	-> 					CUSTOM "k_deg * stC" 
+
+DERIVED
+        
+OBSERVABLES
+A_au        	C   "au"    "conc."   0   0   "stA"
+C_au 	       	C   "au"    "conc."   0   0   "stC"
+
+ERRORS
+A_au	       "sd_A_au"
+C_au 	       "sd_C_au"
+
+CONDITIONS
+init_stA 	"k_stim/k_del"
+init_stB_01 "k_stim/k_del"
+init_stB_02 "k_stim/k_del"
+init_stB_03 "k_stim/k_del"
+init_stB_04 "k_stim/k_del"
+init_stC 	"(k_prod * k_stim)/(k_deg * k_del)"

@@ -99,8 +99,7 @@ for i = 1:size(chainIndicator, 2)
         %tmp_stname = tmp_stname{end};
         tmp_stname = regexp(tmp_stname, '_', 'split');
         delayCh(i).stname = tmp_stname{end}{1};
-        fid.str = strrep(fid.str, [delayCh(i).stname '_N'], ...
-            sprintf('%s_%02d', delayCh(i).stname, delayCh(i).length));
+        strrep(fid.str, [delayhCh(i).name '_N'], sprintf(''))
 end
 
 if isfield(ar.config, 'chain') && ar.config.chain.flag == 1
