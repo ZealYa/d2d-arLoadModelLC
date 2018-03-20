@@ -88,25 +88,38 @@ end
 chainLines = regexp(fid.str, '(\w*\s*-\d->\s*\w*)', 'match');
 chainID = 1;
 chainIDst = 1;
+chainIDcnd = 1;
 addStates = 0;
 qexit = 0;
 chainpar = 'k_del';
 for i = 1:size(chainIndicator, 2)
-        delayCh(i).length = str2num(chainIndicator{i}(2));
-        delayCh(i).ctr = 0;
-        delayCh(i).ctrst = 2;
-        tmp_stname = regexp(chainLines{i}, '\s*' , 'split');
-        %tmp_stname = tmp_stname{end};
-        tmp_stname = regexp(tmp_stname, '_', 'split');
-        delayCh(i).stname = tmp_stname{end}{1};
-        fid.str = strrep(fid.str, [delayCh(i).stname '_N'], ...
-            sprintf('%s_%02d', delayCh(i).stname, delayCh(i).length));
+    delayCh(i).length = str2num(chainIndicator{i}(2));
+    delayCh(i).ctr = 0;
+    delayCh(i).ctrst = 2;
+    delayCh(i).ctrcnd = 1;
+    delayCh(i).addConditions = 0;
+    tmp_stname = regexp(chainLines{i}, '\s*' , 'split');
+    %tmp_stname = tmp_stname{end};
+    tmp_stname = regexp(tmp_stname, '_', 'split');
+    delayCh(i).stname = tmp_stname{end}{1};
+    if ~isempty(strfind(fid.str, ['init_' delayCh(i).stname '_N']))
+        delayCh(i).autoAddConditions = 1;
+    else
+        delayCh(i).autoAddConditions = 0;
+    end
+    tmp_condition = regexp(fid.str, [sprintf('init_%s_N', delayCh(i).stname)...
+        '\s* "[^"]+"'], 'match');
+    tmp_condition = regexp(tmp_condition, '"', 'split');
+    delayCh(i).cond = tmp_condition{1}{2};
+
+    fid.str = strrep(fid.str, [delayCh(i).stname '_N'], ...
+        sprintf('%s_%02d', delayCh(i).stname, delayCh(i).length));
 end
 
 if isfield(ar.config, 'chain') && ar.config.chain.flag == 1
-   for i = 1:size(chainIndicator, 2)
-       delayCh(i).lenght = ar.chain.lengths(i);
-   end
+    for i = 1:size(chainIndicator, 2)
+        delayCh(i).lenght = ar.chain.lengths(i);
+    end
 end
 
 % DESCRIPTION
@@ -984,6 +997,7 @@ if ( substitutions )
     end
 else
     % Old code path
+    qexit = 0;
     while(~isempty(C{1}) && ~(strcmp(C{1},'PARAMETERS') || strcmp(C{1}, 'RANDOM')))
         arValidateInput( C, 'condition', 'model parameter', 'new expression' );
         qcondpara = ismember(ar.model(m).p, C{1}); %R2013a compatible
@@ -992,15 +1006,40 @@ else
         else
             warning('unknown parameter in conditions: %s (did you mean to place it under SUBSTITUTIONS?)', cell2mat(C{1})); %#ok<WNTAG>
         end
-        if(str2double(matVer.Version)>=8.4)
-            [C, fid] = arTextScan(fid, '%s %q\n',1, 'CommentStyle', ar.config.comment_string);
-        else
-            [C, fid] = arTextScan(fid, '%s %q\n',1, 'CommentStyle', ar.config.comment_string, 'BufSize', 2^16-1);
+        
+        if qexit == 1
+            C{1} = 'RANDOM';
+            break
         end
+        
+        if delayCh(chainIDcnd).addConditions == 0 & str2double(matVer.Version)>=8.4
+            [C, fid] = arTextScan(fid, '%s %q %q %q %s %n %q %n\n',1, 'CommentStyle', ar.config.comment_string);
+        elseif delayCh(chainIDcnd).addConditions == 0 & str2double(matVer.Version)<8.4
+            [C, fid] = arTextScan(fid, '%s %q %q %q %s %n %q %n\n',1, 'CommentStyle', ar.config.comment_string, 'BufSize', 2^16-1);
+        end
+        if (isempty(C{1}) || (strcmp(C{1},'PARAMETERS') || strcmp(C{1}, 'RANDOM'))) && delayCh(chainIDcnd).autoAddConditions
+            delayCh(chainIDcnd).addConditions = 1;
+            tmp_C = C;
+        end
+        if qexit == 0 && delayCh(chainIDcnd).addConditions == 1
+            %C{1} = {['init_' delayCh(chainIDcnd).stname '_' num2str(delayCh(chainIDcnd).ctrcnd)]};
+            C{1} = {sprintf('init_%s_%02d', delayCh(chainIDcnd).stname, delayCh(chainIDcnd).ctrcnd)};
+            C{2} = {delayCh(chainIDcnd).cond};
+            
+            delayCh(chainIDcnd).ctrcnd = delayCh(chainIDcnd).ctrcnd + 1;
+            if delayCh(chainIDcnd).ctrcnd >= delayCh(chainIDcnd).length + 1
+                chainIDcnd = chainIDcnd + 1;
+            end
+        end
+        
+        if chainIDcnd >= size(chainIndicator, 2) + 1
+            qexit = 1;
+        end
+        
     end
 end
-
-ar.model(m).prand = {};
+    
+    ar.model(m).prand = {};
 ar.model(m).rand_type = [];
 if ( strcmp(C{1}, 'RANDOM' ) )    
     [C, fid] = arTextScan(fid, '%s %s\n',1, 'CommentStyle', ar.config.comment_string);
