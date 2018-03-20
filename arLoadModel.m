@@ -80,6 +80,7 @@ end
 matVer = ver('MATLAB');
 
 chainIndicator = regexp(fid.str, '-\d->', 'Match');
+chainLines = regexp(fid.str, '(\w*\s*-\d->\s*\w*)', 'match');
 chainID = 1;
 chainIDst = 1;
 addStates = 0;
@@ -88,6 +89,10 @@ for i = 1:size(chainIndicator, 2)
         delayCh(i).length = str2num(chainIndicator{i}(2));
         delayCh(i).ctr = 0;
         delayCh(i).ctrst = 2;
+        tmp_stname = regexp(chainLines{i}, '\s*' , 'split');
+        %tmp_stname = tmp_stname{end};
+        tmp_stname = regexp(tmp_stname, '_', 'split');
+        delayCh(i).stname = tmp_stname{end}{1};
 end
 
 % DESCRIPTION
@@ -207,10 +212,10 @@ while(~strcmp(C{1},'INPUTS'))
         addStates = 1;
     end
     if qexit == 0 && addStates == 1
-        C = {sprintf('Delay%1d_%02d', chainIDst, delayCh(chainIDst).ctrst), {'C'}, {"nM"},  {"conc."}, {}, {}, {}, {}};
-        delinpid = find(ismember(ar.model(end).x, sprintf('Delay%1d_%02d', chainIDst, 1)));
+        C = {sprintf('%s_%02d', delayCh(chainIDst).stname, delayCh(chainIDst).ctrst), {'C'}, {"nM"},  {"conc."}, {}, {}, {}, {}};
+        delinpid = find(ismember(ar.model(end).x, sprintf('%s_%02d', delayCh(chainIDst).stname, 1)));
         
-        C{1} = {sprintf('Delay%1d_%02d', chainIDst, delayCh(chainIDst).ctrst)};
+        C{1} = {sprintf('%s_%02d', delayCh(chainIDst).stname, delayCh(chainIDst).ctrst)};
         C{2} = ar.model(m).xUnits(delinpid,1);
         C{3} = ar.model(m).xUnits(delinpid,2);
         C{4} = ar.model(m).xUnits(delinpid,3);
@@ -231,8 +236,6 @@ while(~strcmp(C{1},'INPUTS'))
         qexit = 1;
     end
 end
-
-% add delay states
 
 % INPUTS
 ar.model(m).u = {};
@@ -598,11 +601,10 @@ if(strcmp(C{1},'REACTIONS') || strcmp(C{1},'REACTIONS-AMOUNTBASED'))
             delayCh(chainID).ctr = delayCh(chainID).ctr + 1;
         end
         if delayCh(chainID).ctr ~= 0 && delayCh(chainID).ctr < delayCh(chainID).length
-            line = sprintf('Delay%1d_%02d -> Delay%1d_%02d CUSTOM "k_delay%1d*Delay%1d_%02d"',...
-                chainID, delayCh(chainID).ctr, chainID, delayCh(chainID).ctr+1, chainID, chainID, delayCh(chainID).ctr);
+            line = sprintf('%s_%02d -> %s_%02d CUSTOM "k_del_%s*%s_%02d"',...
+                delayCh(chainID).stname, delayCh(chainID).ctr, delayCh(chainID).stname, delayCh(chainID).ctr+1, delayCh(chainID).stname, delayCh(chainID).stname, delayCh(chainID).ctr);
             remainder = line;
-            delayCh(chainID).ctr = delayCh(chainID).ctr + 1; %es wird gar keine neue line
-            %geladen also greift immer erste if clause
+            delayCh(chainID).ctr = delayCh(chainID).ctr + 1;
         end     
         if isempty( remainder )
             [ line, remainder, fid ] = readLine( fid, ar.config.comment_string );

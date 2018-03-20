@@ -21,7 +21,7 @@ mRNA    -4->    testDelay_01  CUSTOM "k_delinp * mRNA"
 
 
 
-testDelay_04   ->      Prod        CUSTOM "k_prod * testDelay_04"
+Delay1_04   ->      Prod        CUSTOM "k_prod * testDelay_01_04"
 Prod    -6->      Delay_01            CUSTOM "k_deg * Prod"  
 Delay_06 ->      CUSTOM "k_deg2 * Delay_06"
 
