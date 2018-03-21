@@ -1018,12 +1018,12 @@ else
         elseif delayCh(chainIDcnd).addConditions == 0 & str2double(matVer.Version)<8.4
             [C, fid] = arTextScan(fid, '%s %q %q %q %s %n %q %n\n',1, 'CommentStyle', ar.config.comment_string, 'BufSize', 2^16-1);
         end
+        C{1}
         if (isempty(C{1}) || (strcmp(C{1},'PARAMETERS') || strcmp(C{1}, 'RANDOM')))
             if delayCh(chainIDcnd).autoAddConditions
                 delayCh(chainIDcnd).addConditions = 1;
                 tmp_C = C;
             else
-                chainIDcnd = chainIDcnd + 1;
                 delayCh(chainIDcnd).addConditions = delayCh(chainIDcnd).autoAddConditions;
                 %C{1} = {'Dummy'};
             end
@@ -1039,16 +1039,22 @@ else
             end
         end
         
+        if delayCh(chainIDcnd).autoAddConditions == 0
+             chainIDcnd = chainIDcnd + 1;
+        end
+
+        
+        test = 1;
         if chainIDcnd >= size(chainIndicator, 2) + 1
             qexit = 1;
         end
         
     end
 end
-    
-    ar.model(m).prand = {};
+
+ar.model(m).prand = {};
 ar.model(m).rand_type = [];
-if ( strcmp(C{1}, 'RANDOM' ) )    
+if ( strcmp(C{1}, 'RANDOM' ) )
     [C, fid] = arTextScan(fid, '%s %s\n',1, 'CommentStyle', ar.config.comment_string);
     while(~isempty(C{1}) && ~strcmp(C{1},'PARAMETERS'))
         ar.model(m).prand{end+1} = cell2mat(C{1});
@@ -1060,9 +1066,9 @@ if ( strcmp(C{1}, 'RANDOM' ) )
             warning('unknown random type %s', cell2mat(C{2}));  %#ok<WNTAG>
         end
         [C, fid] = arTextScan(fid, '%s %s\n',1, 'CommentStyle', ar.config.comment_string);
-    end    
+    end
 end
-    
+
 % extra conditional parameters
 varlist = cellfun(@symvar, ar.model(m).fp, 'UniformOutput', false);
 ar.model(m).pcond = setdiff(setdiff(setdiff(vertcat(varlist{:}), ar.model(m).p), ar.model(m).x), ar.model(m).u); %R2013a compatible
