@@ -259,7 +259,7 @@ while(~strcmp(C{1},'INPUTS'))
         C{8} = ar.model(m).qPositiveX(delinpid);
         
         delayCh(chainIDst).ctrst = delayCh(chainIDst).ctrst + 1;
-        if delayCh(chainIDst).ctrst == delayCh(chainIDst).length + 1;
+        if delayCh(chainIDst).ctrst >= delayCh(chainIDst).length + 1;
             chainIDst = chainIDst + 1;
         end
     end
