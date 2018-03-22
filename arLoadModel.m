@@ -99,7 +99,6 @@ for i = 1:size(chainIndicator, 2)
     delayCh(i).ctrcnd = 1;
     delayCh(i).addConditions = 0;
     tmp_stname = regexp(chainLines{i}, '\s*' , 'split');
-    %tmp_stname = tmp_stname{end};
     tmp_stname = regexp(tmp_stname, '_', 'split');
     delayCh(i).stname = tmp_stname{end}{1};
     if ~isempty(strfind(fid.str, ['init_' delayCh(i).stname '_N']))
@@ -111,8 +110,6 @@ for i = 1:size(chainIndicator, 2)
     else
         delayCh(i).autoAddConditions = 0;
     end
-    
-
     fid.str = strrep(fid.str, [delayCh(i).stname '_N'], ...
         sprintf('%s_%02d', delayCh(i).stname, delayCh(i).length));
 end
@@ -250,7 +247,8 @@ while(~strcmp(C{1},'INPUTS'))
         C{2} = ar.model(m).xUnits(delinpid,1);
         C{3} = ar.model(m).xUnits(delinpid,2);
         C{4} = ar.model(m).xUnits(delinpid,3);
-        %C{5} = compartments ergänzen
+        C{5} = ar.model.cLink(delinpid);
+        C{5} = ar.model.c(ar.model.cLink(delinpid));
         C{6} = ar.model(m).qPlotX(delinpid);
         C{7} = {[ar.model(m).xNames{delinpid} '_' num2str(i)]};
         C{8} = ar.model(m).qPositiveX(delinpid);
@@ -267,6 +265,7 @@ while(~strcmp(C{1},'INPUTS'))
         qexit = 1;
     end
 end
+%chainID = 1;
 
 % INPUTS
 ar.model(m).u = {};
@@ -625,6 +624,7 @@ if(strcmp(C{1},'REACTIONS') || strcmp(C{1},'REACTIONS-AMOUNTBASED'))
         end
         [str, remainder] = grabtoken( remainder, '%s', 1 );
     end
+    %chainID = 1;
 elseif(strcmp(C{1},'ODES'))
     ar.model(m).isReactionBased = false;
     [str, fid] = arTextScan(fid, '%q\n',1, 'CommentStyle', ar.config.comment_string);
@@ -999,6 +999,7 @@ if ( substitutions )
 else
     % Old code path
     qexit = 0;
+    chainID = 1;
     while(~isempty(C{1}) && ~(strcmp(C{1},'PARAMETERS') || strcmp(C{1}, 'RANDOM')))
         arValidateInput( C, 'condition', 'model parameter', 'new expression' );
         qcondpara = ismember(ar.model(m).p, C{1}); %R2013a compatible
@@ -1009,7 +1010,7 @@ else
         end
         
         if qexit == 1
-            C{1} = 'RANDOM';
+            [C, fid] = arTextScan(fid, '%s %s\n',1, 'CommentStyle', ar.config.comment_string);
             break
         end
         
@@ -1020,32 +1021,29 @@ else
         end
         C{1}
         if (isempty(C{1}) || (strcmp(C{1},'PARAMETERS') || strcmp(C{1}, 'RANDOM')))
-            if delayCh(chainIDcnd).autoAddConditions
-                delayCh(chainIDcnd).addConditions = 1;
-                tmp_C = C;
-            else
-                delayCh(chainIDcnd).addConditions = delayCh(chainIDcnd).autoAddConditions;
-                %C{1} = {'Dummy'};
+            while chainIDcnd <= size(chainIndicator, 2) && delayCh(chainIDcnd).addConditions ~= 1
+                if delayCh(chainIDcnd).autoAddConditions == 1
+                    delayCh(chainIDcnd).addConditions = 1;
+                else
+                    delayCh(chainIDcnd).addConditions = 2;
+                   % C{1} = {'Dummy'};
+                   % C{2} = {'Dummy'};
+                    chainIDcnd = chainIDcnd + 1;
+                end
             end
         end
-        if qexit == 0 && delayCh(chainIDcnd).addConditions == 1
-            %C{1} = {['init_' delayCh(chainIDcnd).stname '_' num2str(delayCh(chainIDcnd).ctrcnd)]};
+        
+        if chainIDcnd <= size(chainIndicator, 2) && delayCh(chainIDcnd).addConditions == 1
             C{1} = {sprintf('init_%s_%02d', delayCh(chainIDcnd).stname, delayCh(chainIDcnd).ctrcnd)};
             C{2} = {delayCh(chainIDcnd).cond};
             
             delayCh(chainIDcnd).ctrcnd = delayCh(chainIDcnd).ctrcnd + 1;
-            if delayCh(chainIDcnd).ctrcnd >= delayCh(chainIDcnd).length + 1
+            if delayCh(chainIDcnd).ctrcnd > delayCh(chainIDcnd).length
                 chainIDcnd = chainIDcnd + 1;
             end
         end
         
-        if delayCh(chainIDcnd).autoAddConditions == 0
-             chainIDcnd = chainIDcnd + 1;
-        end
-
-        
-        test = 1;
-        if chainIDcnd >= size(chainIndicator, 2) + 1
+        if chainIDcnd > size(chainIndicator, 2)
             qexit = 1;
         end
         

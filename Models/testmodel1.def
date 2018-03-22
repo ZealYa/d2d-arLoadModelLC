@@ -33,11 +33,10 @@ Prod_au       "sd_Prod_au"
 
 CONDITIONS
 init_mRNA   "b/k_delay"
-init_testDelay_N   "b/k_delay"
 
-init_Delay_01   "b/k_delay"
-init_Delay_02   "b/k_delay"
-init_Delay_03   "b/k_delay"
+init_testDelay_N   "35"
 
 
-init_Prod   "(b*k_prod)/(k_deg*k_delay)"
+init_Delay_N   "5/k_del_Delay"
+
+init_Prod   "(5*k_prod)/(k_deg*k_delay)"
