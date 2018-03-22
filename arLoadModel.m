@@ -80,11 +80,6 @@ end
 matVer = ver('MATLAB');
 
 chainIndicator = regexp(fid.str, '-\d->', 'Match');
-if ~isempty(chainIndicator)
-    for i = 1: size(chainIndicator, 2)
-        arFprintf(1, 'chain found: "%s"\n', chainIndicator{i})
-    end
-end
 chainLines = regexp(fid.str, '(\w*\s*-\d->\s*\w*)', 'match');
 chainID = 1;
 chainIDst = 1;
@@ -112,6 +107,15 @@ for i = 1:size(chainIndicator, 2)
     end
     fid.str = strrep(fid.str, [delayCh(i).stname '_N'], ...
         sprintf('%s_%02d', delayCh(i).stname, delayCh(i).length));
+end
+
+if ~isempty(chainIndicator)
+    for i = 1: size(chainIndicator, 2)
+        arFprintf(2, 'chain found "%s" with states "%s_N"\n', chainIndicator{i}, delayCh(i).stname)
+        if delayCh(i).autoAddConditions == 1
+                arFprintf(2, '    automatically adding conditions with value %s\n', delayCh(i).cond)
+        end
+    end
 end
 
 if isfield(ar.config, 'chain') && ar.config.chain.flag == 1
@@ -247,8 +251,9 @@ while(~strcmp(C{1},'INPUTS'))
         C{2} = ar.model(m).xUnits(delinpid,1);
         C{3} = ar.model(m).xUnits(delinpid,2);
         C{4} = ar.model(m).xUnits(delinpid,3);
-        C{5} = ar.model.cLink(delinpid);
-        C{5} = ar.model.c(ar.model.cLink(delinpid));
+        if(~isempty(ar.model(m).c))
+            C{5} = ar.model.c(ar.model.cLink(delinpid));
+        end
         C{6} = ar.model(m).qPlotX(delinpid);
         C{7} = {[ar.model(m).xNames{delinpid} '_' num2str(i)]};
         C{8} = ar.model(m).qPositiveX(delinpid);
@@ -1019,7 +1024,6 @@ else
         elseif delayCh(chainIDcnd).addConditions == 0 & str2double(matVer.Version)<8.4
             [C, fid] = arTextScan(fid, '%s %q %q %q %s %n %q %n\n',1, 'CommentStyle', ar.config.comment_string, 'BufSize', 2^16-1);
         end
-        C{1}
         if (isempty(C{1}) || (strcmp(C{1},'PARAMETERS') || strcmp(C{1}, 'RANDOM')))
             while chainIDcnd <= size(chainIndicator, 2) && delayCh(chainIDcnd).addConditions ~= 1
                 if delayCh(chainIDcnd).autoAddConditions == 1
