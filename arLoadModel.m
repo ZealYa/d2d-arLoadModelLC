@@ -90,7 +90,7 @@ chainpar = 'k_del';
 for i = 1:size(chainIndicator, 2)
     delayCh(i).length = str2num(chainIndicator{i}(2));
     delayCh(i).ctr = 0;
-    delayCh(i).ctrst = 2;
+    delayCh(i).ctrst = 2; %why 2????
     delayCh(i).ctrcnd = 1;
     delayCh(i).addConditions = 0;
     tmp_stname = regexp(chainLines{i}, '\s*' , 'split');
@@ -240,35 +240,45 @@ while(~strcmp(C{1},'INPUTS'))
     if strcmp(C{1},'INPUTS') && ~isempty(chainIndicator)
         addStates = 1;
     end
+    %    delayCh(chainIDst).ctrst
     if qexit == 0 && addStates == 1
-        C = {sprintf('%s_%02d', delayCh(chainIDst).stname, delayCh(chainIDst).ctrst), {'C'}, {"nM"},  {"conc."}, {}, {}, {}, {}};
-        delinpid = find(ismember(ar.model(end).x, sprintf('%s_%02d', delayCh(chainIDst).stname, 1)));
-        if isempty(delinpid)
-            error('Labelling of chain states not consistent: Did not find appropriate state for chain position "1" in STATES section. Naming has to be of the form "[name of chain states]_01".')
-        end
-        
-        C{1} = {sprintf('%s_%02d', delayCh(chainIDst).stname, delayCh(chainIDst).ctrst)};
-        C{2} = ar.model(m).xUnits(delinpid,1);
-        C{3} = ar.model(m).xUnits(delinpid,2);
-        C{4} = ar.model(m).xUnits(delinpid,3);
-        if(~isempty(ar.model(m).c))
-            C{5} = ar.model.c(ar.model.cLink(delinpid));
-        end
-        C{6} = ar.model(m).qPlotX(delinpid);
-        C{7} = {[ar.model(m).xNames{delinpid} '_' num2str(i)]};
-        C{8} = ar.model(m).qPositiveX(delinpid);
-        
-        delayCh(chainIDst).ctrst = delayCh(chainIDst).ctrst + 1;
-        if delayCh(chainIDst).ctrst >= delayCh(chainIDst).length + 1;
+        if delayCh(chainIDst).length == 1
             chainIDst = chainIDst + 1;
         end
+        if chainIDst > size(chainIndicator, 2)
+            qexit = 1;
+        else
+            C = {sprintf('%s_%02d', delayCh(chainIDst).stname, delayCh(chainIDst).ctrst), {'C'}, {"nM"},  {"conc."}, {}, {}, {}, {}};
+            delinpid = find(ismember(ar.model(end).x, sprintf('%s_%02d', delayCh(chainIDst).stname, 1)));
+            if isempty(delinpid)
+                error('Labelling of chain states not consistent: Did not find appropriate state for chain position "1" in STATES section. Naming has to be of the form "[name of chain states]_01".')
+            end
+            
+            C{1} = {sprintf('%s_%02d', delayCh(chainIDst).stname, delayCh(chainIDst).ctrst)};
+            C{2} = ar.model(m).xUnits(delinpid,1);
+            C{3} = ar.model(m).xUnits(delinpid,2);
+            C{4} = ar.model(m).xUnits(delinpid,3);
+            if(~isempty(ar.model(m).c))
+                C{5} = ar.model.c(ar.model.cLink(delinpid));
+            end
+            C{6} = ar.model(m).qPlotX(delinpid);
+            C{7} = {[ar.model(m).xNames{delinpid} '_' num2str(i)]};
+            C{8} = ar.model(m).qPositiveX(delinpid);
+            
+            delayCh(chainIDst).ctrst = delayCh(chainIDst).ctrst + 1;
+            if delayCh(chainIDst).ctrst >= delayCh(chainIDst).length + 1
+                chainIDst = chainIDst + 1;
+            end
+        end
     end
+    
     if qexit == 1
         C{1} = 'INPUTS';
     end
     if chainIDst >= size(chainIndicator, 2) + 1
         qexit = 1;
     end
+
 end
 %chainID = 1;
 
@@ -739,7 +749,6 @@ for j=1:length(ar.model(m).x) % for every species j
         ar.model(m).fx_par{j} = char('0');
     end
 end
-
 
 % DERIVED (previously INVARIANTS)
 if(strcmp(str{1},'INVARIANTS'))
